@@ -4,11 +4,13 @@ import br.com.gestao_pelada.adapter.outbound.models.JogadorEntityJpa;
 import br.com.gestao_pelada.application.port.outbound.JogadorRepositoryPort;
 import br.com.gestao_pelada.domain.model.Jogador;
 import br.com.gestao_pelada.mapper.JogadorMapper;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Repository
 public class JogadorRepositoryAdapter implements JogadorRepositoryPort {
 
     private final JogadorRepositoryJpa repositoryJpa;
@@ -21,16 +23,15 @@ public class JogadorRepositoryAdapter implements JogadorRepositoryPort {
 
     @Override
     public Jogador save(Jogador jogador) {
-        JogadorEntityJpa jogadorEntityJpa = mapper.toEntity(jogador);
-        return mapper.toDomain(this.repositoryJpa.save(jogadorEntityJpa));
+        JogadorEntityJpa jogadorEntityJpa = mapper.domainToEntityJpa(jogador);
+        return mapper.EntityJpaToDomain(this.repositoryJpa.save(jogadorEntityJpa));
     }
 
     @Override
-    public Jogador findById(Long id) {
+    public Optional<Jogador> findById(Long id) {
         Optional<JogadorEntityJpa> jogadorEntityJpa = this.repositoryJpa.findById(id);
         return jogadorEntityJpa
-                .map(mapper::toDomain)
-                .orElse(null);
+                .map(mapper::EntityJpaToDomain);
     }
 
     @Override
@@ -38,7 +39,7 @@ public class JogadorRepositoryAdapter implements JogadorRepositoryPort {
         List<JogadorEntityJpa> jogadorEntityJpa = this.repositoryJpa.findAll();
         return jogadorEntityJpa
                 .stream()
-                .map(mapper::toDomain)
+                .map(mapper::EntityJpaToDomain)
                 .collect(Collectors.toList());
     }
 
