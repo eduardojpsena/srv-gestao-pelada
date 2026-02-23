@@ -1,6 +1,6 @@
-package br.com.gestao_pelada.domain.model;
+package br.com.gestao_pelada.adapter.inbound.models;
 
-public record Jogador(
+public record JogadorResponseDTO(
         Long id,
         String nome,
         String apelido,

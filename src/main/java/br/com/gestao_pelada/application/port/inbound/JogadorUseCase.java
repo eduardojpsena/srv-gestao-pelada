@@ -7,7 +7,7 @@ import java.util.List;
 
 public interface JogadorUseCase {
 
-    Jogador criarJogador(JogadorRequestDTO jogadorRequest);
+    Jogador criarJogador(Jogador jogador);
 
     Jogador buscarJogador(Long id);
 

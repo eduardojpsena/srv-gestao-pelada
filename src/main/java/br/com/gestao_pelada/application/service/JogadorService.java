@@ -18,9 +18,8 @@ public class JogadorService implements JogadorUseCase {
     private final JogadorMapper mapper;
 
     @Override
-    public Jogador criarJogador(JogadorRequestDTO jogadorRequest) {
-        Jogador newPlayer = mapper.dtoToDomain(jogadorRequest);
-        return this.repository.save(newPlayer);
+    public Jogador criarJogador(Jogador jogador) {
+        return this.repository.save(jogador);
     }
 
     @Override

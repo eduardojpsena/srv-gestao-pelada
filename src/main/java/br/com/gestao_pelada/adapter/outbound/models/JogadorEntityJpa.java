@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name="jogador")
+@Table(name="jogadores")
 @Getter
 @Setter
 @AllArgsConstructor
@@ -19,7 +19,9 @@ public class JogadorEntityJpa {
 
     private String nome;
     private String apelido;
-    private Double estrela;
+    private String telefone;
+    private String email;
+    private Double nota;
     private String posicao;
 
 }

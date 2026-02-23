@@ -4,9 +4,13 @@ import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 
 public record JogadorRequestDTO(
-        @NotEmpty(message = "O nome deve ser informado") String nome,
+        @NotEmpty(message = "O nome deve ser informado")
+        String nome,
         String apelido,
-        @NotNull(message = "A quantidade de estrelas deve ser informda") Double estrela,
+        String telefone,
+        String email,
+        @NotNull(message = "A nota deve ser informada")
+        Double nota,
         String posicao
 ) {
 }

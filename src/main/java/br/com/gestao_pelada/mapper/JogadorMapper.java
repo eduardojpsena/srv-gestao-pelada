@@ -1,6 +1,7 @@
 package br.com.gestao_pelada.mapper;
 
 import br.com.gestao_pelada.adapter.inbound.models.JogadorRequestDTO;
+import br.com.gestao_pelada.adapter.inbound.models.JogadorResponseDTO;
 import br.com.gestao_pelada.adapter.outbound.models.JogadorEntityJpa;
 import br.com.gestao_pelada.domain.model.Jogador;
 import org.mapstruct.Mapper;
@@ -14,6 +15,8 @@ public interface JogadorMapper {
 
     Jogador EntityJpaToDomain(JogadorEntityJpa jogadorEntityJpa);
 
-    @Mappings({@Mapping(target = "id", ignore = true)})
+    @Mapping(target = "id", ignore = true)
     Jogador dtoToDomain(JogadorRequestDTO requestDTO);
+
+    JogadorResponseDTO domainToResponseDTO(Jogador jogador);
 }
