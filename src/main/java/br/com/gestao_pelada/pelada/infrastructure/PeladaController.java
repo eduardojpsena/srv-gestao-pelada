@@ -6,77 +6,65 @@ import br.com.gestao_pelada.pelada.application.dto.PeladaJogadorResponseDTO;
 import br.com.gestao_pelada.pelada.application.dto.PeladaRequestDTO;
 import br.com.gestao_pelada.pelada.application.dto.PeladaResponseDTO;
 import br.com.gestao_pelada.shared.util.PageResponse;
-import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/peladas")
 @RequiredArgsConstructor
-@Tag(name = "Peladas", description = "Cadastro e gestao de peladas e seus jogadores")
-public class PeladaController {
+public class PeladaController implements PeladaApi {
 
     private final PeladaService service;
 
+    @Override
     @PreAuthorize("hasAnyRole('ADMIN','ORGANIZADOR')")
-    @PostMapping
-    public ResponseEntity<PeladaResponseDTO> criar(@Valid @RequestBody PeladaRequestDTO request) {
+    public ResponseEntity<PeladaResponseDTO> criar(PeladaRequestDTO request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.criar(request));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<PeladaResponseDTO> buscarPorId(@PathVariable UUID id) {
+    @Override
+    public ResponseEntity<PeladaResponseDTO> buscarPorId(UUID id) {
         return ResponseEntity.ok(service.buscarPorId(id));
     }
 
-    @GetMapping
+    @Override
     public ResponseEntity<PageResponse<PeladaResponseDTO>> listar(Pageable pageable) {
         return ResponseEntity.ok(PageResponse.from(service.listar(pageable)));
     }
 
+    @Override
     @PreAuthorize("hasAnyRole('ADMIN','ORGANIZADOR')")
-    @PutMapping("/{id}")
-    public ResponseEntity<PeladaResponseDTO> atualizar(@PathVariable UUID id, @Valid @RequestBody PeladaRequestDTO request) {
+    public ResponseEntity<PeladaResponseDTO> atualizar(UUID id, PeladaRequestDTO request) {
         return ResponseEntity.ok(service.atualizar(id, request));
     }
 
+    @Override
     @PreAuthorize("hasAnyRole('ADMIN','ORGANIZADOR')")
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deletar(@PathVariable UUID id) {
+    public ResponseEntity<Void> deletar(UUID id) {
         service.deletar(id);
         return ResponseEntity.noContent().build();
     }
 
+    @Override
     @PreAuthorize("hasAnyRole('ADMIN','ORGANIZADOR')")
-    @PostMapping("/{id}/jogadores")
-    public ResponseEntity<PeladaJogadorResponseDTO> adicionarJogador(
-            @PathVariable UUID id, @Valid @RequestBody PeladaJogadorRequestDTO request) {
+    public ResponseEntity<PeladaJogadorResponseDTO> adicionarJogador(UUID id, PeladaJogadorRequestDTO request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.adicionarJogador(id, request));
     }
 
-    @GetMapping("/{id}/jogadores")
-    public ResponseEntity<List<PeladaJogadorResponseDTO>> listarJogadores(@PathVariable UUID id) {
+    @Override
+    public ResponseEntity<List<PeladaJogadorResponseDTO>> listarJogadores(UUID id) {
         return ResponseEntity.ok(service.listarJogadores(id));
     }
 
+    @Override
     @PreAuthorize("hasAnyRole('ADMIN','ORGANIZADOR')")
-    @DeleteMapping("/{id}/jogadores/{jogadorId}")
-    public ResponseEntity<Void> removerJogador(@PathVariable UUID id, @PathVariable UUID jogadorId) {
+    public ResponseEntity<Void> removerJogador(UUID id, UUID jogadorId) {
         service.removerJogador(id, jogadorId);
         return ResponseEntity.noContent().build();
     }
