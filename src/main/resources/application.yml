@@ -1,23 +1,14 @@
 spring:
   application:
     name: srv-gestao-pelada
-  datasource:
-    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:gestao_pelada}
-    username: ${DB_USERNAME:gestao_pelada}
-    password: ${DB_PASSWORD:gestao_pelada}
-    driver-class-name: org.postgresql.Driver
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   jpa:
-    hibernate:
-      ddl-auto: validate
     show-sql: false
     open-in-view: false
     properties:
       hibernate:
         format_sql: true
-  flyway:
-    enabled: true
-    locations: classpath:db/migration
-    baseline-on-migrate: true
 
 server:
   port: ${SERVER_PORT:8080}
