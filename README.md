@@ -83,13 +83,161 @@ são aplicadas automaticamente na subida, incluindo dados de exemplo (seed).
 ./mvnw spring-boot:run
 ```
 
+### H2 (local) vs. PostgreSQL
+
+A aplicação possui dois profiles de banco de dados:
+
+- **`dev`** (padrão): usa **H2 em memória**, sem exigir nenhuma infraestrutura externa — o schema é gerado
+  automaticamente pelo Hibernate (`ddl-auto: create-drop`) e o Flyway fica desabilitado. Ideal para rodar
+  rapidamente sem Docker/Postgres. Console disponível em `http://localhost:8080/h2-console`
+  (JDBC URL `jdbc:h2:mem:gestao_pelada`, usuário `sa`, sem senha). A base sobe vazia; cadastre os dados via API.
+- **`postgres`**: usa PostgreSQL com as migrations do Flyway e o seed de dados (veja a tabela de usuários abaixo).
+  Ative com:
+
+```powershell
+$env:SPRING_PROFILES_ACTIVE = "postgres"
+./mvnw spring-boot:run
+```
+
 ## Usuários de exemplo (seed)
+
+> Disponíveis apenas com o profile `postgres` (Flyway aplica o seed). No profile `dev` (H2), a base sobe vazia.
 
 | E-mail                 | Senha       | Papel        |
 |-------------------------|-------------|--------------|
 | admin@pelada.com        | admin123    | ADMIN        |
 | carlos@pelada.com       | senha123    | ORGANIZADOR  |
 | joao@pelada.com         | senha123    | JOGADOR      |
+
+## Fluxo de uso da API
+
+Passo a passo simulando o ciclo de vida completo de uma pelada: autenticação → cadastro de jogadores → criação
+da pelada → vínculo de jogadores → criação da partida → confirmação de presença → sorteio de times → registro de
+eventos → consulta de estatísticas.
+
+> Substitua `SEU_TOKEN` pelo `accessToken` retornado no login, e os UUIDs de exemplo pelos valores reais retornados
+> em cada etapa.
+
+### 1. Login
+
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "admin@pelada.com", "senha": "admin123"}'
+```
+
+Retorna `accessToken`, `refreshToken`, `tokenType` e `expiresInMs`. Use `/api/v1/auth/refresh` com o `refreshToken`
+para renovar o `accessToken` quando expirar.
+
+### 2. Cadastrar jogadores
+
+```bash
+curl -X POST http://localhost:8080/api/v1/jogadores \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"nome": "Carlos Silva", "apelido": "Carlinhos", "email": "carlos@pelada.com", "notaGeral": 4.5, "posicao": "ATACANTE"}'
+```
+
+Repita para os demais jogadores. Guarde os `id` (UUID) retornados.
+
+### 3. Criar a pelada
+
+```bash
+curl -X POST http://localhost:8080/api/v1/peladas \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"nome": "Pelada da Firma", "diaSemana": "QUARTA", "horario": "19:00:00", "local": "Quadra Central", "organizadorId": "UUID_DO_ORGANIZADOR"}'
+```
+
+Guarde o `id` da pelada retornado.
+
+### 4. Vincular jogadores à pelada
+
+```bash
+curl -X POST http://localhost:8080/api/v1/peladas/UUID_DA_PELADA/jogadores \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"jogadorId": "UUID_DO_JOGADOR", "notaPelada": 4.0, "mensalista": true}'
+```
+
+Repita para cada jogador que participará da pelada.
+
+### 5. Criar uma partida
+
+```bash
+curl -X POST http://localhost:8080/api/v1/peladas/UUID_DA_PELADA/partidas \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"data": "2026-10-01", "horario": "19:00:00", "local": "Quadra Central", "numeroTimes": 2, "jogadoresPorTime": 5}'
+```
+
+Guarde o `id` da partida retornado.
+
+### 6. Confirmar participantes
+
+```bash
+curl -X POST http://localhost:8080/api/v1/partidas/UUID_DA_PARTIDA/participantes \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"jogadorId": "UUID_DO_JOGADOR", "goleiro": false}'
+```
+
+Repita para cada jogador confirmado. Opcionalmente, use
+`PATCH /api/v1/partidas/{partidaId}/participantes/{jogadorId}/presenca` (payload `{"presente": true}`) no dia do
+jogo para marcar quem efetivamente compareceu.
+
+### 7. Sortear os times
+
+```bash
+curl -X POST http://localhost:8080/api/v1/partidas/UUID_DA_PARTIDA/sorteio \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"tipo": "ESTRELAS", "numeroTimes": 2}'
+```
+
+Retorna a lista de times com seus jogadores. Consulte novamente com `GET /api/v1/partidas/{partidaId}/times`, ou
+refaça o sorteio removendo os times atuais (`DELETE /api/v1/partidas/{partidaId}/times`).
+
+### 8. Iniciar a partida
+
+```bash
+curl -X PATCH http://localhost:8080/api/v1/partidas/UUID_DA_PARTIDA/status \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "EM_ANDAMENTO"}'
+```
+
+### 9. Registrar eventos (gols, assistências, cartões)
+
+```bash
+curl -X POST http://localhost:8080/api/v1/partidas/UUID_DA_PARTIDA/eventos \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"jogadorId": "UUID_DO_JOGADOR", "timeId": "UUID_DO_TIME", "tipo": "GOL", "minuto": 23}'
+```
+
+Repita para cada evento ocorrido durante a partida (`tipo`: `GOL`, `ASSISTENCIA`, `CARTAO_AMARELO`,
+`CARTAO_VERMELHO`).
+
+### 10. Finalizar a partida
+
+```bash
+curl -X PATCH http://localhost:8080/api/v1/partidas/UUID_DA_PARTIDA/status \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "FINALIZADA"}'
+```
+
+### 11. Consultar estatísticas da pelada
+
+```bash
+curl http://localhost:8080/api/v1/peladas/UUID_DA_PELADA/estatisticas/ranking \
+  -H "Authorization: Bearer SEU_TOKEN"
+```
+
+Também disponíveis: `/estatisticas/artilheiros`, `/estatisticas/assistencias` e `/estatisticas/cartoes`.
+
+> Toda a API está documentada e pode ser testada interativamente em `/swagger-ui.html`.
 
 ## Testes
 
