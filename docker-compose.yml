@@ -1,0 +1,37 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: pelada-db
+    environment:
+      POSTGRES_DB: gestao_pelada
+      POSTGRES_USER: gestao_pelada
+      POSTGRES_PASSWORD: gestao_pelada
+    ports:
+      - "5432:5432"
+    volumes:
+      - pelada_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gestao_pelada -d gestao_pelada"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    container_name: pelada-api
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: gestao_pelada
+      DB_USERNAME: gestao_pelada
+      DB_PASSWORD: gestao_pelada
+      JWT_SECRET: oNZrBH9lWwOO3nSuHmi+aUboal/QPMAXkaHTrzLaFJWf3JVIZDO/fkbM2ZSItReIV8fZbuXwaS+0SmIs1z9SeA==
+      SERVER_PORT: 8080
+    ports:
+      - "8080:8080"
+
+volumes:
+  pelada_pgdata:
