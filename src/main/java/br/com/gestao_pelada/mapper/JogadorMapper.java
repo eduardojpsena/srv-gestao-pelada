@@ -1,22 +1,16 @@
 package br.com.gestao_pelada.mapper;
 
-import br.com.gestao_pelada.adapter.inbound.models.JogadorRequestDTO;
-import br.com.gestao_pelada.adapter.inbound.models.JogadorResponseDTO;
-import br.com.gestao_pelada.adapter.outbound.models.JogadorEntityJpa;
-import br.com.gestao_pelada.domain.model.Jogador;
+import br.com.gestao_pelada.model.dto.JogadorRequestDTO;
+import br.com.gestao_pelada.model.dto.JogadorResponseDTO;
+import br.com.gestao_pelada.model.entity.JogadorEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.Mappings;
 
 @Mapper(componentModel = "spring")
 public interface JogadorMapper {
 
-    JogadorEntityJpa domainToEntityJpa(Jogador jogador);
-
-    Jogador EntityJpaToDomain(JogadorEntityJpa jogadorEntityJpa);
-
     @Mapping(target = "id", ignore = true)
-    Jogador dtoToDomain(JogadorRequestDTO requestDTO);
+    JogadorEntity toEntity(JogadorRequestDTO request);
 
-    JogadorResponseDTO domainToResponseDTO(Jogador jogador);
+    JogadorResponseDTO toResponse(JogadorEntity entity);
 }

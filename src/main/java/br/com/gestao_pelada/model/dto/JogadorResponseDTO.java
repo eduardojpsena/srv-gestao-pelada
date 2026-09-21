@@ -1,6 +1,6 @@
-package br.com.gestao_pelada.domain.model;
+package br.com.gestao_pelada.model.dto;
 
-public record Jogador(
+public record JogadorResponseDTO(
         Long id,
         String nome,
         String apelido,

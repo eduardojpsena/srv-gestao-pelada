@@ -1,4 +1,4 @@
-package br.com.gestao_pelada.adapter.inbound.models;
+package br.com.gestao_pelada.model.dto;
 
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
