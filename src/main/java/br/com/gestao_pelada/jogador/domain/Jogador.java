@@ -31,7 +31,7 @@ public class Jogador {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
-    @Column(name = "usuario_id")
+    @Column(name = "usuario_id", unique = true)
     private UUID usuarioId;
 
     @Column(nullable = false)

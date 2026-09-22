@@ -1,9 +1,15 @@
 package br.com.gestao_pelada.pelada.infrastructure;
 
+import br.com.gestao_pelada.pelada.application.dto.AlterarPapelRequestDTO;
+import br.com.gestao_pelada.pelada.application.dto.DecisaoSolicitacaoRequestDTO;
+import br.com.gestao_pelada.pelada.application.dto.MembroRequestDTO;
+import br.com.gestao_pelada.pelada.application.dto.MembroResponseDTO;
 import br.com.gestao_pelada.pelada.application.dto.PeladaJogadorRequestDTO;
 import br.com.gestao_pelada.pelada.application.dto.PeladaJogadorResponseDTO;
 import br.com.gestao_pelada.pelada.application.dto.PeladaRequestDTO;
 import br.com.gestao_pelada.pelada.application.dto.PeladaResponseDTO;
+import br.com.gestao_pelada.pelada.application.dto.ProvisionarMembroRequestDTO;
+import br.com.gestao_pelada.pelada.application.dto.SolicitacaoEntradaResponseDTO;
 import br.com.gestao_pelada.shared.util.PageResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -17,6 +23,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -32,7 +39,7 @@ public interface PeladaApi {
             summary = "Cadastra uma nova pelada",
             description =
                     """
-                    Cria uma nova pelada.
+                    Cria uma nova pelada. O usuario autenticado torna-se ADMIN automaticamente.
 
                     **Campos do payload:**
                     - `diaSemana`: {"SEGUNDA", "TERCA", "QUARTA", "QUINTA", "SEXTA", "SABADO", "DOMINGO"}
@@ -124,4 +131,36 @@ public interface PeladaApi {
             @Parameter(description = "Identificador da pelada", required = true) @PathVariable("id") UUID id,
             @Parameter(description = "Identificador do jogador", required = true) @PathVariable("jogadorId")
                     UUID jogadorId);
+
+    @Operation(summary = "Vincula usuario registrado", description = "O ADMIN vincula por e-mail um usuario que concluiu o registro.")
+    @PostMapping("/{id}/membros")
+    ResponseEntity<MembroResponseDTO> adicionarMembro(
+            @PathVariable("id") UUID id, @RequestBody @Valid MembroRequestDTO request);
+
+    @Operation(summary = "Provisiona jogador", description = "O ADMIN cria usuario e jogador com senha inicial. O cadastro fica pendente ate o usuario registrar uma nova senha.")
+    @PostMapping("/{id}/membros/provisionar")
+    ResponseEntity<MembroResponseDTO> provisionarMembro(
+            @PathVariable("id") UUID id, @RequestBody @Valid ProvisionarMembroRequestDTO request);
+
+    @Operation(summary = "Solicita entrada na pelada", description = "Cria uma solicitacao pendente para o usuario autenticado.")
+    @PostMapping("/{id}/solicitacoes-entrada")
+    ResponseEntity<SolicitacaoEntradaResponseDTO> solicitarEntrada(@PathVariable("id") UUID id);
+
+    @Operation(summary = "Lista solicitacoes pendentes", description = "Disponivel para administradores da pelada.")
+    @GetMapping("/{id}/solicitacoes-entrada")
+    ResponseEntity<List<SolicitacaoEntradaResponseDTO>> listarSolicitacoes(@PathVariable("id") UUID id);
+
+    @Operation(summary = "Aprova ou recusa solicitacao", description = "Informe APROVADA ou RECUSADA. A aprovacao cria o membro JOGADOR.")
+    @PatchMapping("/{id}/solicitacoes-entrada/{solicitacaoId}")
+    ResponseEntity<SolicitacaoEntradaResponseDTO> decidirSolicitacao(
+            @PathVariable("id") UUID id,
+            @PathVariable("solicitacaoId") UUID solicitacaoId,
+            @RequestBody @Valid DecisaoSolicitacaoRequestDTO request);
+
+    @Operation(summary = "Altera papel do membro", description = "O ADMIN delega ADMIN, ORGANIZADOR ou JOGADOR dentro desta pelada.")
+    @PatchMapping("/{id}/membros/{usuarioId}/papel")
+    ResponseEntity<MembroResponseDTO> alterarPapel(
+            @PathVariable("id") UUID id,
+            @PathVariable("usuarioId") UUID usuarioId,
+            @RequestBody @Valid AlterarPapelRequestDTO request);
 }

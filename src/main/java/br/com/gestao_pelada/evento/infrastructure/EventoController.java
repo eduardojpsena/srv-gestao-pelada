@@ -19,18 +19,19 @@ public class EventoController implements EventoApi {
     private final EventoService service;
 
     @Override
-    @PreAuthorize("hasAnyRole('ADMIN','ORGANIZADOR')")
+    @PreAuthorize("@peladaAuthorization.podeGerenciarPartida(#partidaId, authentication)")
     public ResponseEntity<EventoResponseDTO> registrar(UUID partidaId, EventoRequestDTO request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.registrar(partidaId, request));
     }
 
     @Override
+    @PreAuthorize("@peladaAuthorization.podeAcessarPartida(#partidaId, authentication)")
     public ResponseEntity<List<EventoResponseDTO>> listar(UUID partidaId) {
         return ResponseEntity.ok(service.listarPorPartida(partidaId));
     }
 
     @Override
-    @PreAuthorize("hasAnyRole('ADMIN','ORGANIZADOR')")
+    @PreAuthorize("@peladaAuthorization.podeGerenciarEvento(#id, authentication)")
     public ResponseEntity<Void> remover(UUID id) {
         service.remover(id);
         return ResponseEntity.noContent().build();

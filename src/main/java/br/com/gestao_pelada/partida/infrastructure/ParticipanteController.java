@@ -20,25 +20,26 @@ public class ParticipanteController implements ParticipanteApi {
     private final PartidaService service;
 
     @Override
-    @PreAuthorize("hasAnyRole('ADMIN','ORGANIZADOR')")
+    @PreAuthorize("@peladaAuthorization.podeGerenciarPartida(#partidaId, authentication)")
     public ResponseEntity<ParticipanteResponseDTO> adicionar(UUID partidaId, ParticipanteRequestDTO request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.adicionarParticipante(partidaId, request));
     }
 
     @Override
+    @PreAuthorize("@peladaAuthorization.podeAcessarPartida(#partidaId, authentication)")
     public ResponseEntity<List<ParticipanteResponseDTO>> listar(UUID partidaId) {
         return ResponseEntity.ok(service.listarParticipantes(partidaId));
     }
 
     @Override
-    @PreAuthorize("hasAnyRole('ADMIN','ORGANIZADOR')")
+    @PreAuthorize("@peladaAuthorization.podeGerenciarPartida(#partidaId, authentication)")
     public ResponseEntity<ParticipanteResponseDTO> atualizarPresenca(
             UUID partidaId, UUID jogadorId, PresencaUpdateDTO request) {
         return ResponseEntity.ok(service.atualizarPresenca(partidaId, jogadorId, request.presente()));
     }
 
     @Override
-    @PreAuthorize("hasAnyRole('ADMIN','ORGANIZADOR')")
+    @PreAuthorize("@peladaAuthorization.podeGerenciarPartida(#partidaId, authentication)")
     public ResponseEntity<Void> remover(UUID partidaId, UUID jogadorId) {
         service.removerParticipante(partidaId, jogadorId);
         return ResponseEntity.noContent().build();

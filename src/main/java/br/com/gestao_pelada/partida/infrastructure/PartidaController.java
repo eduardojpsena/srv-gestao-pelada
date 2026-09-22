@@ -21,35 +21,37 @@ public class PartidaController implements PartidaApi {
     private final PartidaService service;
 
     @Override
-    @PreAuthorize("hasAnyRole('ADMIN','ORGANIZADOR')")
+    @PreAuthorize("@peladaAuthorization.podeGerenciar(#peladaId, authentication)")
     public ResponseEntity<PartidaResponseDTO> criar(UUID peladaId, PartidaRequestDTO request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.criar(peladaId, request));
     }
 
     @Override
+    @PreAuthorize("@peladaAuthorization.podeAcessar(#peladaId, authentication)")
     public ResponseEntity<PageResponse<PartidaResponseDTO>> listarPorPelada(UUID peladaId, Pageable pageable) {
         return ResponseEntity.ok(PageResponse.from(service.listarPorPelada(peladaId, pageable)));
     }
 
     @Override
+    @PreAuthorize("@peladaAuthorization.podeAcessarPartida(#id, authentication)")
     public ResponseEntity<PartidaResponseDTO> buscarPorId(UUID id) {
         return ResponseEntity.ok(service.buscarPorId(id));
     }
 
     @Override
-    @PreAuthorize("hasAnyRole('ADMIN','ORGANIZADOR')")
+    @PreAuthorize("@peladaAuthorization.podeGerenciarPartida(#id, authentication)")
     public ResponseEntity<PartidaResponseDTO> atualizar(UUID id, PartidaRequestDTO request) {
         return ResponseEntity.ok(service.atualizar(id, request));
     }
 
     @Override
-    @PreAuthorize("hasAnyRole('ADMIN','ORGANIZADOR')")
+    @PreAuthorize("@peladaAuthorization.podeGerenciarPartida(#id, authentication)")
     public ResponseEntity<PartidaResponseDTO> atualizarStatus(UUID id, PartidaStatusUpdateDTO request) {
         return ResponseEntity.ok(service.atualizarStatus(id, request.status()));
     }
 
     @Override
-    @PreAuthorize("hasAnyRole('ADMIN','ORGANIZADOR')")
+    @PreAuthorize("@peladaAuthorization.podeGerenciarPartida(#id, authentication)")
     public ResponseEntity<Void> deletar(UUID id) {
         service.deletar(id);
         return ResponseEntity.noContent().build();

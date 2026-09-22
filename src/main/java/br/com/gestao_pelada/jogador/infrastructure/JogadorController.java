@@ -20,7 +20,7 @@ public class JogadorController implements JogadorApi {
     private final JogadorService service;
 
     @Override
-    @PreAuthorize("hasAnyRole('ADMIN','ORGANIZADOR')")
+    @PreAuthorize("denyAll()")
     public ResponseEntity<JogadorResponseDTO> criar(JogadorRequestDTO request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.criar(request));
     }
@@ -36,13 +36,13 @@ public class JogadorController implements JogadorApi {
     }
 
     @Override
-    @PreAuthorize("hasAnyRole('ADMIN','ORGANIZADOR')")
+    @PreAuthorize("denyAll()")
     public ResponseEntity<JogadorResponseDTO> atualizar(UUID id, JogadorRequestDTO request) {
         return ResponseEntity.ok(service.atualizar(id, request));
     }
 
     @Override
-    @PreAuthorize("hasAnyRole('ADMIN','ORGANIZADOR')")
+    @PreAuthorize("denyAll()")
     public ResponseEntity<Void> deletar(UUID id) {
         service.deletar(id);
         return ResponseEntity.noContent().build();

@@ -1,5 +1,6 @@
 package br.com.gestao_pelada.auth.infrastructure;
 
+import br.com.gestao_pelada.auth.application.dto.ConcluirRegistroRequest;
 import br.com.gestao_pelada.auth.application.dto.LoginRequest;
 import br.com.gestao_pelada.auth.application.dto.RefreshRequest;
 import br.com.gestao_pelada.auth.application.dto.RegisterRequest;
@@ -23,10 +24,8 @@ public interface AuthApi {
             summary = "Registra um novo usuario",
             description =
                     """
-                    Cria um novo usuario da aplicacao.
-
-                    **Campos do payload:**
-                    - `role`: {"ADMIN", "ORGANIZADOR", "JOGADOR"}
+                    Cria um usuario sem papel global. Os papeis sao atribuidos em cada pelada.
+                    Se o e-mail foi provisionado por um administrador, conclui o cadastro e substitui a senha inicial.
                     """)
     @ApiResponses(
             value = {
@@ -36,6 +35,12 @@ public interface AuthApi {
             })
     @PostMapping("/register")
     ResponseEntity<UsuarioResponseDTO> registrar(@RequestBody @Valid RegisterRequest request);
+
+    @Operation(
+            summary = "Conclui cadastro provisionado",
+            description = "Valida a senha inicial definida pelo ADMIN e exige a definicao de uma nova senha.")
+    @PostMapping("/complete-registration")
+    ResponseEntity<UsuarioResponseDTO> concluirRegistro(@RequestBody @Valid ConcluirRegistroRequest request);
 
     @Operation(
             summary = "Autentica um usuario",

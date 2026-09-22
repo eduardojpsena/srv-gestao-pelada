@@ -12,6 +12,7 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 public interface PeladaMapper {
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "organizadorId", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "criadoEm", ignore = true)
     Pelada toEntity(PeladaRequestDTO request);
@@ -19,6 +20,7 @@ public interface PeladaMapper {
     PeladaResponseDTO toResponse(Pelada entity);
 
     @Mapping(target = "id", ignore = true)
+    @Mapping(target = "organizadorId", ignore = true)
     @Mapping(target = "status", ignore = true)
     @Mapping(target = "criadoEm", ignore = true)
     void updateFromRequest(PeladaRequestDTO request, @MappingTarget Pelada entity);

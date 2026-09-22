@@ -1,6 +1,7 @@
 package br.com.gestao_pelada.auth.infrastructure;
 
 import br.com.gestao_pelada.auth.application.AuthService;
+import br.com.gestao_pelada.auth.application.dto.ConcluirRegistroRequest;
 import br.com.gestao_pelada.auth.application.dto.LoginRequest;
 import br.com.gestao_pelada.auth.application.dto.RefreshRequest;
 import br.com.gestao_pelada.auth.application.dto.RegisterRequest;
@@ -20,6 +21,11 @@ public class AuthController implements AuthApi {
     @Override
     public ResponseEntity<UsuarioResponseDTO> registrar(RegisterRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.registrar(request));
+    }
+
+    @Override
+    public ResponseEntity<UsuarioResponseDTO> concluirRegistro(ConcluirRegistroRequest request) {
+        return ResponseEntity.ok(authService.concluirRegistro(request));
     }
 
     @Override

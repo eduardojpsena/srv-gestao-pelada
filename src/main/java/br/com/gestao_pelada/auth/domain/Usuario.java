@@ -1,10 +1,7 @@
 package br.com.gestao_pelada.auth.domain;
 
-import br.com.gestao_pelada.shared.enums.Role;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.GeneratedValue;
@@ -41,13 +38,13 @@ public class Usuario {
     @Column(name = "senha_hash", nullable = false)
     private String senhaHash;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 20)
-    private Role role;
-
     @Column(nullable = false)
     @Builder.Default
     private boolean ativo = true;
+
+    @Column(name = "cadastro_concluido", nullable = false)
+    @Builder.Default
+    private boolean cadastroConcluido = true;
 
     @Column(name = "criado_em", nullable = false, updatable = false)
     private Instant criadoEm;
@@ -59,4 +56,3 @@ public class Usuario {
         }
     }
 }
-

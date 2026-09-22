@@ -18,7 +18,7 @@ public class SorteioController implements SorteioApi {
     private final SorteioService service;
 
     @Override
-    @PreAuthorize("hasAnyRole('ADMIN','ORGANIZADOR')")
+    @PreAuthorize("@peladaAuthorization.podeGerenciarPartida(#partidaId, authentication)")
     public ResponseEntity<List<TimeResponseDTO>> sortear(UUID partidaId, SorteioRequestDTO request) {
         return ResponseEntity.ok(service.sortear(partidaId, request));
     }

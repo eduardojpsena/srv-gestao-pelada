@@ -40,24 +40,19 @@ class PeladaLifecycleIntegrationTest {
 
     @Test
     void devePercorrerTodoOFluxoDeUmaPeladaAteAsEstatisticas() throws Exception {
-        tokenOrganizador = registrarELogar("organizador.fluxo@pelada.com", "ORGANIZADOR");
-
-        String jogador1Id = criarJogador("Jogador Um", 4.5);
-        String jogador2Id = criarJogador("Jogador Dois", 3.5);
-        String jogador3Id = criarJogador("Jogador Tres", 4.0);
-        String jogador4Id = criarJogador("Jogador Quatro", 2.5);
+        tokenOrganizador = registrarELogar("organizador.fluxo@pelada.com");
 
         String peladaId = criarPelada();
 
-        adicionarJogadorNaPelada(peladaId, jogador1Id);
-        adicionarJogadorNaPelada(peladaId, jogador2Id);
-        adicionarJogadorNaPelada(peladaId, jogador3Id);
-        adicionarJogadorNaPelada(peladaId, jogador4Id);
+        String jogador1Id = provisionarJogador(peladaId, "Jogador Um", "jogador1@pelada.com");
+        String jogador2Id = provisionarJogador(peladaId, "Jogador Dois", "jogador2@pelada.com");
+        String jogador3Id = provisionarJogador(peladaId, "Jogador Tres", "jogador3@pelada.com");
+        String jogador4Id = provisionarJogador(peladaId, "Jogador Quatro", "jogador4@pelada.com");
 
         mockMvc.perform(get("/api/v1/peladas/" + peladaId + "/jogadores")
                         .header("Authorization", "Bearer " + tokenOrganizador))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.length()").value(4));
+                .andExpect(jsonPath("$.length()").value(5));
 
         String partidaId = criarPartida(peladaId);
 
@@ -120,12 +115,11 @@ class PeladaLifecycleIntegrationTest {
         assertThat(ranking.get(0).get("gols").asLong()).isEqualTo(1L);
     }
 
-    private String registrarELogar(String email, String role) throws Exception {
+    private String registrarELogar(String email) throws Exception {
         String registerBody = objectMapper.writeValueAsString(new LinkedHashMap<>() {{
             put("nome", "Usuario " + email);
             put("email", email);
             put("senha", "senha123");
-            put("role", role);
         }});
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -141,26 +135,35 @@ class PeladaLifecycleIntegrationTest {
         return objectMapper.readTree(response).get("accessToken").asText();
     }
 
-    private String criarJogador(String nome, double nota) throws Exception {
+    private String provisionarJogador(String peladaId, String nome, String email) throws Exception {
         String body = objectMapper.writeValueAsString(new LinkedHashMap<>() {{
             put("nome", nome);
-            put("notaGeral", nota);
-            put("posicao", "MEIA");
+            put("email", email);
+            put("senhaPadrao", "senha123");
         }});
-        String response = mockMvc.perform(post("/api/v1/jogadores")
+        String response = mockMvc.perform(post("/api/v1/peladas/" + peladaId + "/membros/provisionar")
                         .header("Authorization", "Bearer " + tokenOrganizador)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
-        return objectMapper.readTree(response).get("id").asText();
+        String usuarioId = objectMapper.readTree(response).get("usuarioId").asText();
+        String jogadores = mockMvc.perform(get("/api/v1/peladas/" + peladaId + "/jogadores")
+                        .header("Authorization", "Bearer " + tokenOrganizador))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        for (JsonNode jogador : objectMapper.readTree(jogadores)) {
+            if (jogador.get("nomeJogador").asText().equals(nome)) {
+                return jogador.get("jogadorId").asText();
+            }
+        }
+        throw new AssertionError("Jogador nao encontrado para usuario " + usuarioId);
     }
 
     private String criarPelada() throws Exception {
         String body = objectMapper.writeValueAsString(new LinkedHashMap<>() {{
             put("nome", "Pelada de Integracao");
             put("diaSemana", "SABADO");
-            put("organizadorId", java.util.UUID.randomUUID().toString());
         }});
         String response = mockMvc.perform(post("/api/v1/peladas")
                         .header("Authorization", "Bearer " + tokenOrganizador)
@@ -171,14 +174,6 @@ class PeladaLifecycleIntegrationTest {
         return objectMapper.readTree(response).get("id").asText();
     }
 
-    private void adicionarJogadorNaPelada(String peladaId, String jogadorId) throws Exception {
-        String body = objectMapper.writeValueAsString(Map.of("jogadorId", jogadorId));
-        mockMvc.perform(post("/api/v1/peladas/" + peladaId + "/jogadores")
-                        .header("Authorization", "Bearer " + tokenOrganizador)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(body))
-                .andExpect(status().isCreated());
-    }
 
     private String criarPartida(String peladaId) throws Exception {
         String body = objectMapper.writeValueAsString(new LinkedHashMap<>() {{

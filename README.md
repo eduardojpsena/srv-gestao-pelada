@@ -7,7 +7,7 @@ cadastro e gestão de usuários, peladas, jogadores, partidas, times, sorteios e
 
 - Java 25 + Spring Boot 4 (Web, Validation, Security, Data JPA)
 - PostgreSQL + Flyway (migrations e seed de dados)
-- JWT (access + refresh token) com autorização baseada em papéis (`ADMIN`, `ORGANIZADOR`, `JOGADOR`)
+- JWT (access + refresh token) com autorização contextual por pelada (`ADMIN`, `ORGANIZADOR`, `JOGADOR`)
 - MapStruct + Lombok
 - springdoc-openapi (Swagger UI)
 - JUnit 5, MockMvc, AssertJ, H2 (testes), Testcontainers (disponível para testes com Postgres real)
@@ -15,8 +15,7 @@ cadastro e gestão de usuários, peladas, jogadores, partidas, times, sorteios e
 
 ## Arquitetura
 
-O projeto utiliza uma arquitetura modular por domínio (feature package), com camadas internas inspiradas em
-Clean Architecture:
+O projeto utiliza uma arquitetura modular por domínio (feature package), com camadas internas:
 
 - `domain`: entidades JPA e enums exclusivos da persistência/regra de negócio.
 - `application`: serviços (casos de uso), DTOs e mappers (MapStruct).
@@ -43,8 +42,8 @@ br.com.gestao_pelada
 | Módulo        | Endpoints                                                                 |
 |---------------|-----------------------------------------------------------------------------|
 | Auth          | `POST /api/v1/auth/register`, `/login`, `/refresh`                          |
-| Jogadores     | `POST/GET/PUT/DELETE /api/v1/jogadores(/{id})`                              |
-| Peladas       | `POST/GET/PUT/DELETE /api/v1/peladas(/{id})`, jogadores da pelada           |
+| Membros       | associação, provisionamento, solicitações e papéis em `/api/v1/peladas/{id}` |
+| Peladas       | `POST/GET/PUT/DELETE /api/v1/peladas(/{id})`, membros e jogadores           |
 | Partidas      | `POST/GET/PUT/PATCH/DELETE /api/v1/peladas/{peladaId}/partidas`, `/api/v1/partidas/{id}` |
 | Participantes | `POST/GET/PATCH/DELETE /api/v1/partidas/{partidaId}/participantes`          |
 | Sorteio       | `POST /api/v1/partidas/{partidaId}/sorteio` (estratégias: `POTES`, `ESTRELAS`, `AVULSO`) |
@@ -52,8 +51,9 @@ br.com.gestao_pelada
 | Eventos       | `POST/GET/DELETE /api/v1/partidas/{partidaId}/eventos`, `/api/v1/eventos/{id}` |
 | Estatísticas  | `GET /api/v1/peladas/{peladaId}/estatisticas/{ranking,artilheiros,assistencias,cartoes}` |
 
-Endpoints de escrita (criar/atualizar/remover) exigem papel `ADMIN` ou `ORGANIZADOR`; leitura exige apenas usuário
-autenticado. Documentação interativa disponível em `/swagger-ui.html` (OpenAPI em `/v3/api-docs`).
+Não existem papéis globais. Todo usuário registrado pode criar uma pelada e torna-se `ADMIN` dela. As permissões
+de escrita dependem do papel nessa pelada; a leitura é restrita a membros. Documentação interativa disponível em
+`/swagger-ui.html` (OpenAPI em `/v3/api-docs`).
 
 ## Sorteio de times (Strategy pattern)
 
@@ -103,16 +103,12 @@ $env:SPRING_PROFILES_ACTIVE = "postgres"
 
 > Disponíveis apenas com o profile `postgres` (Flyway aplica o seed). No profile `dev` (H2), a base sobe vazia.
 
-| E-mail                 | Senha       | Papel        |
-|-------------------------|-------------|--------------|
-| admin@pelada.com        | admin123    | ADMIN        |
-| carlos@pelada.com       | senha123    | ORGANIZADOR  |
-| joao@pelada.com         | senha123    | JOGADOR      |
+Os usuários do seed não possuem papel global. `carlos@pelada.com` é migrado como `ADMIN` da Pelada do Bairro.
 
 ## Fluxo de uso da API
 
-Passo a passo simulando o ciclo de vida completo de uma pelada: autenticação → cadastro de jogadores → criação
-da pelada → vínculo de jogadores → criação da partida → confirmação de presença → sorteio de times → registro de
+Passo a passo simulando o ciclo de vida completo de uma pelada: autenticação → criação da pelada → entrada de
+jogadores → criação da partida → confirmação de presença → sorteio de times → registro de
 eventos → consulta de estatísticas.
 
 > Substitua `SEU_TOKEN` pelo `accessToken` retornado no login, e os UUIDs de exemplo pelos valores reais retornados
@@ -129,38 +125,41 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 Retorna `accessToken`, `refreshToken`, `tokenType` e `expiresInMs`. Use `/api/v1/auth/refresh` com o `refreshToken`
 para renovar o `accessToken` quando expirar.
 
-### 2. Cadastrar jogadores
-
-```bash
-curl -X POST http://localhost:8080/api/v1/jogadores \
-  -H "Authorization: Bearer SEU_TOKEN" \
-  -H "Content-Type: application/json" \
-  -d '{"nome": "Carlos Silva", "apelido": "Carlinhos", "email": "carlos@pelada.com", "notaGeral": 4.5, "posicao": "ATACANTE"}'
-```
-
-Repita para os demais jogadores. Guarde os `id` (UUID) retornados.
-
-### 3. Criar a pelada
+### 2. Criar a pelada
 
 ```bash
 curl -X POST http://localhost:8080/api/v1/peladas \
   -H "Authorization: Bearer SEU_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"nome": "Pelada da Firma", "diaSemana": "QUARTA", "horario": "19:00:00", "local": "Quadra Central", "organizadorId": "UUID_DO_ORGANIZADOR"}'
+  -d '{"nome": "Pelada da esquina", "diaSemana": "QUARTA", "horario": "19:00:00", "local": "Quadra Central"}'
 ```
 
-Guarde o `id` da pelada retornado.
+O usuário autenticado torna-se `ADMIN` automaticamente.
 
-### 4. Vincular jogadores à pelada
+### 3. Adicionar jogadores à pelada
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/peladas/UUID_DA_PELADA/jogadores \
+curl -X POST http://localhost:8080/api/v1/peladas/UUID_DA_PELADA/membros \
   -H "Authorization: Bearer SEU_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"jogadorId": "UUID_DO_JOGADOR", "notaPelada": 4.0, "mensalista": true}'
+  -d '{"email": "jogador@pelada.com", "papel": "JOGADOR"}'
 ```
 
-Repita para cada jogador que participará da pelada.
+Também é possível solicitar entrada em `POST /api/v1/peladas/{id}/solicitacoes-entrada`,
+provisionar um jogador em `POST /api/v1/peladas/{id}/membros/provisionar` e 
+delegar papel em `PATCH /api/v1/peladas/{id}/membros/{usuarioId}/papel`.
+
+### 4. Aprovar solicitações e concluir cadastros
+
+```bash
+curl -X PATCH http://localhost:8080/api/v1/peladas/UUID_DA_PELADA/solicitacoes-entrada/UUID_DA_SOLICITACAO \
+  -H "Authorization: Bearer SEU_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "APROVADA"}'
+```
+
+Contas provisionadas possuem `cadastroConcluido=false` e não podem fazer login. O usuário conclui o cadastro em
+`POST /api/v1/auth/complete-registration`, informando `email`, `senhaInicial` e `novaSenha`.
 
 ### 5. Criar uma partida
 

@@ -16,7 +16,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 /**
  * Testa o fluxo completo de autenticacao (registro, login, refresh) e a
- * autorizacao baseada em papeis (roles) nos endpoints protegidos por JWT.
+ * criacao de pelada e autorizacao contextual nos endpoints protegidos por JWT.
  */
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -42,7 +42,6 @@ class AuthFlowIntegrationTest {
             put("nome", "Usuario Teste");
             put("email", email);
             put("senha", "senha123");
-            put("role", "ORGANIZADOR");
         }});
 
         mockMvc.perform(post("/api/v1/auth/register")
@@ -50,7 +49,7 @@ class AuthFlowIntegrationTest {
                         .content(registerBody))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.email").value(email))
-                .andExpect(jsonPath("$.role").value("ORGANIZADOR"));
+                .andExpect(jsonPath("$.cadastroConcluido").value(true));
 
         String loginBody = objectMapper.writeValueAsString(new java.util.LinkedHashMap<>() {{
             put("email", email);
@@ -86,37 +85,26 @@ class AuthFlowIntegrationTest {
     }
 
     @Test
-    void jogadorComumNaoDevePoderCriarPeladaMasOrganizadorPode() throws Exception {
-        registrarUsuario("jogador.comum@pelada.com", "JOGADOR");
-        registrarUsuario("organizador.chefe@pelada.com", "ORGANIZADOR");
-
-        String tokenJogador = logarERetornarAccessToken("jogador.comum@pelada.com");
-        String tokenOrganizador = logarERetornarAccessToken("organizador.chefe@pelada.com");
+    void qualquerUsuarioRegistradoPodeCriarPeladaETornaSeAdmin() throws Exception {
+        registrarUsuario("criador@pelada.com");
+        String tokenCriador = logarERetornarAccessToken("criador@pelada.com");
 
         String peladaBody = objectMapper.writeValueAsString(new java.util.LinkedHashMap<>() {{
             put("nome", "Pelada de Teste");
-            put("organizadorId", java.util.UUID.randomUUID().toString());
         }});
 
         mockMvc.perform(post("/api/v1/peladas")
-                        .header("Authorization", "Bearer " + tokenJogador)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(peladaBody))
-                .andExpect(status().isForbidden());
-
-        mockMvc.perform(post("/api/v1/peladas")
-                        .header("Authorization", "Bearer " + tokenOrganizador)
+                        .header("Authorization", "Bearer " + tokenCriador)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(peladaBody))
                 .andExpect(status().isCreated());
     }
 
-    private void registrarUsuario(String email, String role) throws Exception {
+    private void registrarUsuario(String email) throws Exception {
         String body = objectMapper.writeValueAsString(new java.util.LinkedHashMap<>() {{
             put("nome", "Usuario " + email);
             put("email", email);
             put("senha", "senha123");
-            put("role", role);
         }});
         mockMvc.perform(post("/api/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)

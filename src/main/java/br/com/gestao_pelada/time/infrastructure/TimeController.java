@@ -17,12 +17,13 @@ public class TimeController implements TimeApi {
     private final TimeService service;
 
     @Override
+    @PreAuthorize("@peladaAuthorization.podeAcessarPartida(#partidaId, authentication)")
     public ResponseEntity<List<TimeResponseDTO>> listar(UUID partidaId) {
         return ResponseEntity.ok(service.listarPorPartida(partidaId));
     }
 
     @Override
-    @PreAuthorize("hasAnyRole('ADMIN','ORGANIZADOR')")
+    @PreAuthorize("@peladaAuthorization.podeGerenciarPartida(#partidaId, authentication)")
     public ResponseEntity<Void> remover(UUID partidaId) {
         service.removerTimesDaPartida(partidaId);
         return ResponseEntity.noContent().build();
