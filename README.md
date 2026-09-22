@@ -15,11 +15,19 @@ cadastro e gestão de usuários, peladas, jogadores, partidas, times, sorteios e
 
 ## Arquitetura
 
-O projeto utiliza uma arquitetura modular por domínio (feature package), com camadas internas:
+O projeto utiliza arquitetura modular por domínio (feature package) e camadas explícitas:
 
-- `domain`: entidades JPA e enums exclusivos da persistência/regra de negócio.
-- `application`: serviços (casos de uso), DTOs e mappers (MapStruct).
-- `infrastructure`: controllers REST e repositórios Spring Data JPA.
+- `controller`: contratos OpenAPI e adaptadores REST (`*Api` e `*Controller`).
+- `service`: casos de uso e regras de negócio.
+- `repository`: interfaces Spring Data JPA para persistência.
+- `model/entity`: entidades JPA.
+- `model/enums`: enums do módulo.
+- `model/dto`: objetos de entrada e saída da API.
+- `model/mapper`: mapeamentos entre entidades e DTOs (MapStruct).
+- `infrastructure`: integrações técnicas externas, quando necessárias (`client`, configurações ou adaptadores).
+
+O fluxo principal é `controller -> service -> repository`. A organização por feature evita que um módulo dependa de
+detalhes internos de outro.
 
 ### Estrutura de pacotes
 
@@ -37,19 +45,38 @@ br.com.gestao_pelada
 └── config        # segurança (Spring Security) e OpenAPI
 ```
 
-## Módulos e endpoints principais
+Exemplo de estrutura interna:
 
-| Módulo        | Endpoints                                                                 |
-|---------------|-----------------------------------------------------------------------------|
-| Auth          | `POST /api/v1/auth/register`, `/login`, `/refresh`                          |
-| Membros       | associação, provisionamento, solicitações e papéis em `/api/v1/peladas/{id}` |
-| Peladas       | `POST/GET/PUT/DELETE /api/v1/peladas(/{id})`, membros e jogadores           |
-| Partidas      | `POST/GET/PUT/PATCH/DELETE /api/v1/peladas/{peladaId}/partidas`, `/api/v1/partidas/{id}` |
-| Participantes | `POST/GET/PATCH/DELETE /api/v1/partidas/{partidaId}/participantes`          |
-| Sorteio       | `POST /api/v1/partidas/{partidaId}/sorteio` (estratégias: `POTES`, `ESTRELAS`, `AVULSO`) |
-| Times         | `GET/DELETE /api/v1/partidas/{partidaId}/times`                             |
-| Eventos       | `POST/GET/DELETE /api/v1/partidas/{partidaId}/eventos`, `/api/v1/eventos/{id}` |
-| Estatísticas  | `GET /api/v1/peladas/{peladaId}/estatisticas/{ranking,artilheiros,assistencias,cartoes}` |
+```text
+pelada/
+├── controller/
+├── service/
+├── repository/
+└── model/
+    ├── entity/
+    ├── dto/
+    └── mapper/
+```
+
+## Endpoints
+
+Todos os endpoints usam o prefixo `/api/v1`. Os endpoints protegidos exigem
+`Authorization: Bearer <accessToken>`
+
+| Módulo | Endpoints |
+|---|---|
+| Auth | `POST /auth/register`, `POST /auth/complete-registration`, `POST /auth/login`, `POST /auth/refresh` |
+| Jogadores | `POST/GET /jogadores`, `GET/PUT/DELETE /jogadores/{id}` |
+| Peladas | `POST/GET /peladas`, `GET/PUT/DELETE /peladas/{id}` |
+| Membros | `POST /peladas/{id}/membros`, `POST /peladas/{id}/membros/provisionar`, `PATCH /peladas/{id}/membros/{usuarioId}/papel` |
+| Solicitações | `POST/GET /peladas/{id}/solicitacoes-entrada`, `PATCH /peladas/{id}/solicitacoes-entrada/{solicitacaoId}` |
+| Jogadores da pelada | `POST/GET /peladas/{id}/jogadores`, `DELETE /peladas/{id}/jogadores/{jogadorId}` |
+| Partidas | `POST/GET /peladas/{peladaId}/partidas`, `GET/PUT/DELETE /partidas/{id}`, `PATCH /partidas/{id}/status` |
+| Participantes | `POST/GET /partidas/{partidaId}/participantes`, `PATCH /partidas/{partidaId}/participantes/{jogadorId}/presenca`, `DELETE /partidas/{partidaId}/participantes/{jogadorId}` |
+| Sorteio | `POST /partidas/{partidaId}/sorteio` (`POTES`, `ESTRELAS` ou `AVULSO`) |
+| Times | `GET/DELETE /partidas/{partidaId}/times` |
+| Eventos | `POST/GET /partidas/{partidaId}/eventos`, `DELETE /eventos/{id}` |
+| Estatísticas | `GET /peladas/{peladaId}/estatisticas/ranking`, `/artilheiros`, `/assistencias` e `/cartoes` |
 
 Não existem papéis globais. Todo usuário registrado pode criar uma pelada e torna-se `ADMIN` dela. As permissões
 de escrita dependem do papel nessa pelada; a leitura é restrita a membros. Documentação interativa disponível em
@@ -57,7 +84,7 @@ de escrita dependem do papel nessa pelada; a leitura é restrita a membros. Docu
 
 ## Sorteio de times (Strategy pattern)
 
-Três estratégias de sorteio, implementadas em `sorteio/domain/strategy`:
+Três estratégias de sorteio, implementadas em `sorteio/service/strategy`:
 
 - **AVULSO**: distribuição totalmente aleatória.
 - **ESTRELAS**: balanceamento guloso pela nota geral do jogador (maior soma de notas equilibrada entre os times).
@@ -111,7 +138,7 @@ Passo a passo simulando o ciclo de vida completo de uma pelada: autenticação �
 jogadores → criação da partida → confirmação de presença → sorteio de times → registro de
 eventos → consulta de estatísticas.
 
-> Substitua `SEU_TOKEN` pelo `accessToken` retornado no login, e os UUIDs de exemplo pelos valores reais retornados
+> Substitua `SEU_TOKEN` pelo `accessToken` retornado no login, e os IDs numéricos de exemplo pelos valores reais retornados
 > em cada etapa.
 
 ### 1. Login
@@ -139,7 +166,7 @@ O usuário autenticado torna-se `ADMIN` automaticamente.
 ### 3. Adicionar jogadores à pelada
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/peladas/UUID_DA_PELADA/membros \
+curl -X POST http://localhost:8080/api/v1/peladas/ID_DA_PELADA/membros \
   -H "Authorization: Bearer SEU_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"email": "jogador@pelada.com", "papel": "JOGADOR"}'
@@ -152,7 +179,7 @@ delegar papel em `PATCH /api/v1/peladas/{id}/membros/{usuarioId}/papel`.
 ### 4. Aprovar solicitações e concluir cadastros
 
 ```bash
-curl -X PATCH http://localhost:8080/api/v1/peladas/UUID_DA_PELADA/solicitacoes-entrada/UUID_DA_SOLICITACAO \
+curl -X PATCH http://localhost:8080/api/v1/peladas/ID_DA_PELADA/solicitacoes-entrada/ID_DA_SOLICITACAO \
   -H "Authorization: Bearer SEU_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"status": "APROVADA"}'
@@ -164,7 +191,7 @@ Contas provisionadas possuem `cadastroConcluido=false` e não podem fazer login.
 ### 5. Criar uma partida
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/peladas/UUID_DA_PELADA/partidas \
+curl -X POST http://localhost:8080/api/v1/peladas/ID_DA_PELADA/partidas \
   -H "Authorization: Bearer SEU_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"data": "2026-10-01", "horario": "19:00:00", "local": "Quadra Central", "numeroTimes": 2, "jogadoresPorTime": 5}'
@@ -175,10 +202,10 @@ Guarde o `id` da partida retornado.
 ### 6. Confirmar participantes
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/partidas/UUID_DA_PARTIDA/participantes \
+curl -X POST http://localhost:8080/api/v1/partidas/ID_DA_PARTIDA/participantes \
   -H "Authorization: Bearer SEU_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"jogadorId": "UUID_DO_JOGADOR", "goleiro": false}'
+  -d '{"jogadorId": "ID_DO_JOGADOR", "goleiro": false}'
 ```
 
 Repita para cada jogador confirmado. Opcionalmente, use
@@ -188,7 +215,7 @@ jogo para marcar quem efetivamente compareceu.
 ### 7. Sortear os times
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/partidas/UUID_DA_PARTIDA/sorteio \
+curl -X POST http://localhost:8080/api/v1/partidas/ID_DA_PARTIDA/sorteio \
   -H "Authorization: Bearer SEU_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"tipo": "ESTRELAS", "numeroTimes": 2}'
@@ -200,7 +227,7 @@ refaça o sorteio removendo os times atuais (`DELETE /api/v1/partidas/{partidaId
 ### 8. Iniciar a partida
 
 ```bash
-curl -X PATCH http://localhost:8080/api/v1/partidas/UUID_DA_PARTIDA/status \
+curl -X PATCH http://localhost:8080/api/v1/partidas/ID_DA_PARTIDA/status \
   -H "Authorization: Bearer SEU_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"status": "EM_ANDAMENTO"}'
@@ -209,10 +236,10 @@ curl -X PATCH http://localhost:8080/api/v1/partidas/UUID_DA_PARTIDA/status \
 ### 9. Registrar eventos (gols, assistências, cartões)
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/partidas/UUID_DA_PARTIDA/eventos \
+curl -X POST http://localhost:8080/api/v1/partidas/ID_DA_PARTIDA/eventos \
   -H "Authorization: Bearer SEU_TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{"jogadorId": "UUID_DO_JOGADOR", "timeId": "UUID_DO_TIME", "tipo": "GOL", "minuto": 23}'
+  -d '{"jogadorId": "ID_DO_JOGADOR", "timeId": "ID_DO_TIME", "tipo": "GOL", "minuto": 23}'
 ```
 
 Repita para cada evento ocorrido durante a partida (`tipo`: `GOL`, `ASSISTENCIA`, `CARTAO_AMARELO`,
@@ -221,7 +248,7 @@ Repita para cada evento ocorrido durante a partida (`tipo`: `GOL`, `ASSISTENCIA`
 ### 10. Finalizar a partida
 
 ```bash
-curl -X PATCH http://localhost:8080/api/v1/partidas/UUID_DA_PARTIDA/status \
+curl -X PATCH http://localhost:8080/api/v1/partidas/ID_DA_PARTIDA/status \
   -H "Authorization: Bearer SEU_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"status": "FINALIZADA"}'
@@ -230,8 +257,8 @@ curl -X PATCH http://localhost:8080/api/v1/partidas/UUID_DA_PARTIDA/status \
 ### 11. Consultar estatísticas da pelada
 
 ```bash
-curl http://localhost:8080/api/v1/peladas/UUID_DA_PELADA/estatisticas/ranking \
-  -H "Authorization: Bearer SEU_TOKEN"
+curl http://localhost:8080/api/v1/peladas/ID_DA_PELADA/estatisticas/ranking \
+  -H "Authorization: Bearer SEU_TOKEN" \
 ```
 
 Também disponíveis: `/estatisticas/artilheiros`, `/estatisticas/assistencias` e `/estatisticas/cartoes`.

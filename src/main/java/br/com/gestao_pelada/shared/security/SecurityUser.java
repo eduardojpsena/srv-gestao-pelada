@@ -1,12 +1,11 @@
 package br.com.gestao_pelada.shared.security;
 
-import br.com.gestao_pelada.auth.domain.Usuario;
+import br.com.gestao_pelada.auth.model.entity.Usuario;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.List;
-import java.util.UUID;
 
 public class SecurityUser implements UserDetails {
 
@@ -16,7 +15,7 @@ public class SecurityUser implements UserDetails {
         this.usuario = usuario;
     }
 
-    public UUID getId() {
+    public Long getId() {
         return usuario.getId();
     }
 
@@ -59,3 +58,4 @@ public class SecurityUser implements UserDetails {
         return usuario.isAtivo();
     }
 }
+

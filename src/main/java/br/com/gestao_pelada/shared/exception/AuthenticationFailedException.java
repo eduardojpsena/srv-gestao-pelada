@@ -6,3 +6,4 @@ public class AuthenticationFailedException extends RuntimeException {
         super(message);
     }
 }
+

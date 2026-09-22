@@ -12,3 +12,4 @@ public record ApiError(
         List<String> details
 ) {
 }
+

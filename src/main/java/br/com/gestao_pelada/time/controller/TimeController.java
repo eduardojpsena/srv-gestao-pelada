@@ -1,0 +1,31 @@
+package br.com.gestao_pelada.time.controller;
+
+import br.com.gestao_pelada.time.service.TimeService;
+import br.com.gestao_pelada.time.model.dto.TimeResponseDTO;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.List;
+
+@RestController
+@RequiredArgsConstructor
+public class TimeController implements TimeApi {
+
+    private final TimeService service;
+
+    @Override
+    @PreAuthorize("@peladaAuthorization.podeAcessarPartida(#partidaId, authentication)")
+    public ResponseEntity<List<TimeResponseDTO>> listar(Long partidaId) {
+        return ResponseEntity.ok(service.listarPorPartida(partidaId));
+    }
+
+    @Override
+    @PreAuthorize("@peladaAuthorization.podeGerenciarPartida(#partidaId, authentication)")
+    public ResponseEntity<Void> remover(Long partidaId) {
+        service.removerTimesDaPartida(partidaId);
+        return ResponseEntity.noContent().build();
+    }
+}
+
